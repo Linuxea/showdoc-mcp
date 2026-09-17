@@ -1,0 +1,20 @@
+[project]
+name = "showdoc-mcp"
+version = "0.1.0"
+description = "ShowDoc MCP server：项目/目录/页面的读取、写入与批量管理（stdio）"
+readme = "README.md"
+authors = [
+    { name = "linuxea", email = "linuxea@foxmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "mcp>=1.28,<2",
+]
+
+[project.scripts]
+showdoc-mcp = "showdoc_mcp.server:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
