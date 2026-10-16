@@ -24,9 +24,11 @@ for key in ("SHOWDOC_BASE_URL", "SHOWDOC_COOKIE_TOKEN", "SHOWDOC_PHPSESSID", "SH
 
 EXPECTED_TOOLS = {
     "showdoc_list_items", "showdoc_get_item_tree", "showdoc_get_page",
+    "showdoc_search_pages", "showdoc_get_page_history",
     "showdoc_create_catalog", "showdoc_update_catalog", "showdoc_delete_catalog",
-    "showdoc_save_page", "showdoc_delete_page", "showdoc_upload_markdown_dir",
-    "showdoc_clear_item", "showdoc_rename_numbered_catalogs",
+    "showdoc_save_page", "showdoc_delete_page",
+    "showdoc_list_recycle", "showdoc_recover_page",
+    "showdoc_upload_markdown_dir", "showdoc_clear_item", "showdoc_rename_numbered_catalogs",
 }
 
 fails: list[str] = []
@@ -56,6 +58,13 @@ async def check_mode(mode: str) -> None:
             f"[{mode}] 危险工具注解 destructive",
             bool(clear_ann and clear_ann.destructive_hint),
             str(clear_ann),
+        )
+        search_param = by_name["showdoc_search_pages"].input_schema.get("properties", {}).get("keyword", {})
+        check(
+            f"[{mode}] 搜索工具 keyword 参数必填且有描述",
+            by_name["showdoc_search_pages"].input_schema.get("required") == ["keyword"]
+            and "模糊匹配" in search_param.get("description", ""),
+            str(search_param)[:120],
         )
         param_desc = by_name["showdoc_save_page"].input_schema.get("properties", {}).get("page_content", {})
         check(

@@ -20,9 +20,13 @@ from showdoc_mcp.tools import (
     delete_page,
     get_item_tree,
     get_page,
+    get_page_history,
     list_items,
+    list_recycle,
+    recover_page,
     rename_numbered_catalogs,
     save_page,
+    search_pages,
     update_catalog,
     upload_markdown_dir,
 )
@@ -77,8 +81,25 @@ def main() -> int:
         r = update_catalog(cat_id, cat_name="__mcp冒烟测试_改名__")
         check("update_catalog 改名", "已更新" in r, r)
 
+        r = search_pages("冒烟测试页面")
+        check("search_pages 搜到标题", "page_id=" in r and "冒烟测试页面" in r, r)
+        r = search_pages("正文 v2")
+        check("search_pages 搜到正文", "page_id=" in r, r)
+        r = get_page_history(page_id)
+        check("get_page_history 有历史且含旧版", "1 个" in r and "正文 v1" in r, r)
+
         r = delete_page(page_id)
         check("delete_page", "已删除" in r, r)
+
+        # 回收站 → 恢复 → 再删除（保持基线）
+        r = list_recycle()
+        check("list_recycle 含刚删页面", f"page_id={page_id}" in r, r)
+        r = recover_page(page_id)
+        check("recover_page 恢复成功", "已从回收站恢复" in r, r)
+        r = get_page(page_id)
+        check("恢复后可读取", "正文 v2" in r, r)
+        r = delete_page(page_id)
+        check("delete_page 二次删除", "已删除" in r, r)
         r = delete_catalog(cat_id)
         check("delete_catalog 删除空目录", "已删除" in r, r)
         cat_id = page_id = 0

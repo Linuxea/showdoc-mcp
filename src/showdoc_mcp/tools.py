@@ -43,9 +43,9 @@ mcp = MCPServer(
     "showdoc",
     title="ShowDoc 文档服务器",
     instructions=(
-        "ShowDoc 文档系统操作工具（项目/目录/页面的读取、写入与批量管理）。"
-        "目录/页面 ID（cat_id/page_id）先用 showdoc_get_item_tree 查询；"
-        "不知道 item_id 时先用 showdoc_list_items。"
+        "ShowDoc 文档系统操作工具（项目/目录/页面的读取、写入、搜索与批量管理）。"
+        "找页面优先用 showdoc_search_pages 搜索；不知道 item_id 时先用 showdoc_list_items；"
+        "查目录结构用 showdoc_get_item_tree。误删页面可用 showdoc_list_recycle + showdoc_recover_page 恢复。"
         "批量操作 showdoc_upload_markdown_dir 建议先 dry_run=true 预览；"
         "showdoc_clear_item 是危险操作，必须显式 confirm=true 才会真正删除。"
     ),
@@ -222,6 +222,43 @@ def get_page(page_id: PageId) -> str:
     return f"# {info.get('page_title')}\n（{meta}）\n\n{content}"
 
 
+@mcp.tool(name="showdoc_search_pages", title="搜索页面", annotations=_ANN_READ)
+@_safe
+def search_pages(
+    keyword: Annotated[str, Field(description="关键词，模糊匹配页面标题与正文（不区分大小写）")],
+    item_id: ItemId = 0,
+) -> str:
+    """按关键词搜索项目内页面（标题+正文模糊匹配），返回 page_id/cat_id/标题 的扁平清单。
+    找页面优先用这个，比翻目录树快；拿到 page_id 后用 showdoc_get_page 读正文。"""
+    client = get_client()
+    item_id = client.resolve_item(item_id)
+    pages = client.search_pages(item_id, keyword)
+    if not pages:
+        return f"项目 {item_id} 内没有匹配「{keyword}」的页面。可更换关键词，或用 showdoc_get_item_tree 浏览目录。"
+    lines = [f"项目 {item_id} 匹配「{keyword}」的页面（{len(pages)} 个）："]
+    for p in pages:
+        where = f"cat_id={p.get('cat_id')}" if str(p.get("cat_id") or "0") != "0" else "顶级"
+        lines.append(f"- page_id={p['page_id']}（{where}）: {p['page_title']}")
+    return "\n".join(lines)
+
+
+@mcp.tool(name="showdoc_get_page_history", title="页面版本历史", annotations=_ANN_READ)
+@_safe
+def get_page_history(page_id: PageId) -> str:
+    """查页面版本历史（每次更新自动存一版，最多保留最近 20 版，按时间倒序）。
+    返回 page_history_id / 保存时间 / 内容预览。页面从未更新过则没有历史。"""
+    client = get_client()
+    versions = client.page_history(page_id)
+    if not versions:
+        return f"页面 page_id={page_id} 没有历史版本（创建后从未更新过，或页面不存在——可先用 showdoc_get_page 确认）。"
+    lines = [f"页面 page_id={page_id} 的历史版本（{len(versions)} 个，最新在前）："]
+    for v in versions:
+        content = (v.get("page_content") or "").strip().replace("\n", " ")
+        preview = content[:120] + ("…" if len(content) > 120 else "")
+        lines.append(f"- page_history_id={v.get('page_history_id')}  {v.get('addtime')}: {preview or '（空内容）'}")
+    return "\n".join(lines)
+
+
 # ------------------------------------------------------------------- 单条写
 
 
@@ -352,6 +389,41 @@ def delete_page(page_id: PageId, item_id: ItemId = 0) -> str:
     client.page_delete(page_id)
     logger.info("deleted page %s %s", page_id, title)
     return f"已删除页面「{title or page_id}」(page_id={page_id})"
+
+
+@mcp.tool(name="showdoc_list_recycle", title="回收站列表", annotations=_ANN_READ)
+@_safe
+def list_recycle(item_id: ItemId = 0) -> str:
+    """列出项目回收站内被删除的页面（page_id / 标题 / 删除时间）。恢复用 showdoc_recover_page。"""
+    client = get_client()
+    item_id = client.resolve_item(item_id)
+    entries = client.recycle_list(item_id)
+    if not entries:
+        return f"项目 {item_id} 回收站为空。"
+    lines = [f"项目 {item_id} 回收站（{len(entries)} 个页面，最新删除在前）："]
+    for e in entries:
+        lines.append(f"- page_id={e.get('page_id')}  {e.get('del_time')}: {e.get('page_title')}")
+    return "\n".join(lines)
+
+
+@mcp.tool(name="showdoc_recover_page", title="从回收站恢复页面", annotations=_ANN_ADD)
+@_safe
+def recover_page(page_id: PageId, item_id: ItemId = 0) -> str:
+    """把页面从回收站恢复（撤销删除）。注意：ShowDoc 会把恢复的页面放回顶级目录而不是原目录，
+    恢复后如需归位，用 showdoc_get_page 确认内容后再 showdoc_save_page 调整。"""
+    client = get_client()
+    item_id = client.resolve_item(item_id)
+    client.recycle_recover(item_id, page_id)
+    left = [e for e in client.recycle_list(item_id) if str(e.get("page_id")) == str(page_id)]
+    if left:
+        raise ShowDocError(
+            f"恢复请求已发送，但 page_id={page_id} 仍在回收站列表中，请在网页端核对或稍后重试。"
+        )
+    logger.info("recovered page %s item=%s", page_id, item_id)
+    return (
+        f"已从回收站恢复页面 page_id={page_id}（当前位于顶级目录，原目录不保留）。"
+        "可用 showdoc_get_item_tree 确认位置，需要归位时用 showdoc_save_page 更新。"
+    )
 
 
 # --------------------------------------------------------------------- 批量

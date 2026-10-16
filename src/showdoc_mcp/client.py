@@ -111,6 +111,22 @@ class ShowDocClient:
     def page_info(self, page_id: int) -> dict:
         return self.post("page/info", {"page_id": page_id}) or {}
 
+    def search_pages(self, item_id: int, keyword: str) -> list[dict]:
+        """item/info 的 keyword 参数：标题+正文模糊匹配，返回扁平页面列表（v2.6.7 实测）。"""
+        data = self.post("item/info", {"item_id": item_id, "keyword": keyword, "default_page_id": 0}) or {}
+        return (data.get("menu") or {}).get("pages") or []
+
+    def page_history(self, page_id: int) -> list[dict]:
+        """页面版本历史（每次更新存一版，服务端每页最多保留 20 版，含完整正文）。"""
+        return self.post("page/history", {"page_id": page_id}) or []
+
+    def recycle_list(self, item_id: int) -> list[dict]:
+        return self.post("recycle/getList", {"item_id": item_id}) or []
+
+    def recycle_recover(self, item_id: int, page_id: int) -> Any:
+        """从回收站恢复页面。注意：ShowDoc 恢复后页面落在顶级目录（cat_id=0）。"""
+        return self.post("recycle/recover", {"item_id": item_id, "page_id": page_id})
+
     # ------------------------------------------------------------------ write
 
     def catalog_save(

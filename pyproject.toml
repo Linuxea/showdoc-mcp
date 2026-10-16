@@ -1,6 +1,6 @@
 [project]
 name = "showdoc-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "ShowDoc MCP server：项目/目录/页面的读取、写入与批量管理（stdio）"
 readme = "README.md"
 authors = [
@@ -18,3 +18,8 @@ showdoc-mcp = "showdoc_mcp.server:main"
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
