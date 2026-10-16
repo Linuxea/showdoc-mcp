@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import Any, Iterator
 from urllib.parse import quote
 
-import httpx
+import httpx2
 
 # ShowDoc 登录态失效时的特征 error_code / 提示文案
 _AUTH_ERROR_CODES = {10101, 10102}
@@ -43,7 +43,7 @@ class ShowDocClient:
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.default_item_id = default_item_id
-        self._http = httpx.Client(
+        self._http = httpx2.Client(
             timeout=timeout,
             # 默认忽略环境里的 http_proxy/all_proxy 等代理变量：内网 ShowDoc 直连更快更稳；
             # 需要走代理时在 MCP env 里设置 SHOWDOC_TRUST_ENV=1。

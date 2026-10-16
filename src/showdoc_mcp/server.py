@@ -14,7 +14,8 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    logging.getLogger("httpx").setLevel(logging.WARNING)  # 请求级日志降噪
+    for noisy in ("httpx2", "httpcore2"):  # 请求级日志降噪
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     mcp.run(transport="stdio")
 
 

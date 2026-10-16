@@ -1,6 +1,6 @@
 [project]
 name = "showdoc-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "ShowDoc MCP server：项目/目录/页面的读取、写入与批量管理（stdio）"
 readme = "README.md"
 authors = [
@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "httpx>=0.28.1",
-    "mcp>=1.28,<2",
+    "httpx2>=2.13",
+    "mcp>=2.3,<3",
 ]
 
 [project.scripts]
