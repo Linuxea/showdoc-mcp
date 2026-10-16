@@ -102,6 +102,22 @@ class ShowDocClient:
     def my_items(self) -> list[dict]:
         return self.post("item/myList", {"page": 1, "page_size": 100}) or []
 
+    def item_add(self, item_name: str, item_description: str = "") -> int:
+        """创建项目并回查 item_id（scripts/publish_docs.py 等脚本用；不作为 MCP 工具暴露）。
+        v2.6.7 的 item/add 成功时返回空 data，因此创建后按名称在 myList 里回查。"""
+        for it in self.my_items():
+            if it.get("item_name") == item_name:
+                return int(it["item_id"])
+        self.post("item/add", {
+            "item_name": item_name,
+            "item_description": item_description,
+            "item_type": 1,
+        })
+        for it in self.my_items():
+            if it.get("item_name") == item_name:
+                return int(it["item_id"])
+        raise ShowDocError(f"项目「{item_name}」创建请求成功但 myList 未找到，请到网页端核对。")
+
     def item_info(self, item_id: int) -> dict:
         return self.post("item/info", {"item_id": item_id, "keyword": "", "default_page_id": 0}) or {}
 
