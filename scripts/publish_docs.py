@@ -100,7 +100,7 @@ CURATED: dict[str, dict] = {
         "intro": "创建或更新页面（markdown 正文）。`page_id=0`（默认）在指定目录下新建并回查返回新 page_id；传 page_id 则原地更新该页。**本项目最常用的写入工具**。",
         "returns": "新建：`已创建页面「标题」page_id=N（cat_id=X）`；更新：`已更新页面「标题」(page_id=N)`。回查失败时会提示用目录树确认。",
         "example": "调用：`page_title=部署手册, page_content=# 部署手册\\n\\n## Docker 方式\\n..., cat_id=15`\n\n```\n已创建页面「部署手册」page_id=23（cat_id=15）\n```\n更新已有页面：\n```\n已更新页面「部署手册」(page_id=23)\n```",
-        "notes": ["幂等：同内容重复保存结果一致（注意每次更新都会生成一条历史版本）", "非破坏性（新增/覆盖型）"],
+        "notes": ["幂等：同内容重复保存结果一致（注意每次更新都会生成一条历史版本）", "非破坏性（新增/覆盖型）", "更新时省略 cat_id 会保持页面原目录，显式传 cat_id 则移动页面"],
     },
     "showdoc_delete_page": {
         "intro": "删除页面。被删页面**进入 ShowDoc 回收站**（不是彻底删除），可在网页端恢复，更推荐用 `showdoc_recover_page` 直接恢复。",

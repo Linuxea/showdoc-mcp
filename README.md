@@ -20,7 +20,7 @@
 | `showdoc_create_catalog` | I | 创建目录（同名幂等，直接返回已有 cat_id） |
 | `showdoc_update_catalog` | I | 目录改名 / 改排序 |
 | `showdoc_delete_catalog` | D | 删除目录（非空目录拒绝执行，防内容孤儿化） |
-| `showdoc_save_page` | I | 创建/更新页面（page_id=0 新建，回查返回 page_id） |
+| `showdoc_save_page` | I | 创建/更新页面（page_id=0 新建，回查返回 page_id；更新时省略 cat_id 自动保持原目录） |
 | `showdoc_delete_page` | D | 删除页面（进 ShowDoc 回收站，可恢复） |
 | `showdoc_list_recycle` | RI | 列出回收站内被删页面（page_id / 标题 / 删除时间） |
 | `showdoc_recover_page` | I | 从回收站恢复页面（恢复后落顶级目录，需自行归位） |

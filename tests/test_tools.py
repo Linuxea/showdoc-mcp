@@ -157,7 +157,7 @@ class FakeShowDocClient:
     def catalog_delete(self, item_id: int, cat_id: int):
         self.catalogs = [c for c in self.catalogs if c["cat_id"] != int(cat_id)]
 
-    def page_save(self, item_id, page_title, page_content, cat_id=0, page_id=0, s_number=None):
+    def page_save(self, item_id, page_title, page_content, cat_id=None, page_id=0, s_number=None):
         if page_id:
             pid = int(page_id)
             p = self.pages[pid]
@@ -169,6 +169,8 @@ class FakeShowDocClient:
             self._next_hist += 1
             p["page_title"] = page_title
             p["page_content"] = page_content
+            if cat_id is not None:  # 真实 ShowDoc：传了 cat_id 就移动，不传保持原目录
+                p["cat_id"] = int(cat_id)
             return {"page_id": pid}
         pid = self._next_page
         self._next_page += 1
@@ -339,6 +341,23 @@ def test_save_page_create_then_update(fake):
     r2 = save_page("新页", "# 新页\n内容v2", page_id=200)
     assert "已更新页面" in r2
     assert fake.pages[200]["page_content"].endswith("v2")
+
+
+def test_save_page_update_keeps_catalog(fake):
+    """编辑已有页面时省略 cat_id：必须保持原目录，不许掉到顶级（回归测试）。"""
+    save_page("目录页", "内容", cat_id=7)
+    assert fake.pages[200]["cat_id"] == 7
+    r = save_page("目录页", "内容v2", page_id=200)  # 忘传 cat_id
+    assert "已更新页面" in r
+    assert fake.pages[200]["cat_id"] == 7  # 仍在原目录
+
+
+def test_save_page_update_moves_when_cat_given(fake):
+    """更新时显式传 cat_id：移动页面（回收站恢复后归位依赖此行为）。"""
+    save_page("顶级页", "内容")  # cat_id=0 顶级
+    assert fake.pages[200]["cat_id"] == 0
+    save_page("顶级页", "内容v2", page_id=200, cat_id=7)
+    assert fake.pages[200]["cat_id"] == 7
 
 
 def test_delete_page_goes_to_recycle(fake):

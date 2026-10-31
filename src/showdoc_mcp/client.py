@@ -168,7 +168,7 @@ class ShowDocClient:
         item_id: int,
         page_title: str,
         page_content: str,
-        cat_id: int = 0,
+        cat_id: int | None = 0,
         page_id: int = 0,
         s_number: int | None = None,
     ) -> Any:
@@ -180,8 +180,9 @@ class ShowDocClient:
             "page_title": page_title,
             "page_content": quote(page_content),
             "is_urlencode": 1,
-            "cat_id": cat_id,
         }
+        if cat_id is not None:  # None = 更新时不传该字段，服务端保持页面原目录不动
+            data["cat_id"] = cat_id
         if s_number:
             data["s_number"] = s_number
         return self.post("page/save", data)

@@ -350,20 +350,28 @@ def delete_catalog(cat_id: CatId, item_id: ItemId = 0) -> str:
 def save_page(
     page_title: Annotated[str, Field(description="页面标题")],
     page_content: Annotated[str, Field(description="markdown 正文")],
-    cat_id: Annotated[int, Field(description="归属目录 cat_id，0 为顶级；新建时生效")] = 0,
+    cat_id: Annotated[int, Field(description="归属目录 cat_id，0 为顶级。新建时指定归属目录；更新时可省略（=0），自动保持页面原目录")] = 0,
     page_id: Annotated[int, Field(description="要更新的页面 id，0 表示新建")] = 0,
     s_number: Annotated[int, Field(description="排序号，0 表示不设置；新建时生效")] = 0,
     item_id: ItemId = 0,
 ) -> str:
-    """创建或更新页面（markdown 正文）。page_id=0 新建（cat_id 指定归属目录，0 为顶级），否则更新该页。返回 page_id。"""
+    """创建或更新页面（markdown 正文）。page_id=0 新建（cat_id 指定归属目录，0 为顶级）并回查返回 page_id；
+    否则更新该页，此时省略 cat_id 会保持原目录（不会掉到顶级），显式传 cat_id 则移动页面。"""
     client = get_client()
     item_id = client.resolve_item(item_id)
     if page_id:
         try:
-            old_title = client.page_info(page_id).get("page_title")
+            old = client.page_info(page_id)
         except ShowDocError:
-            old_title = None
-        client.page_save(item_id, page_title, page_content, cat_id=cat_id, page_id=page_id)
+            old = {}
+        old_title = old.get("page_title")
+        if cat_id:
+            real_cat = cat_id  # 显式传了 cat_id：移动页面（如回收站恢复后归位）
+        elif old:
+            real_cat = int(old.get("cat_id") or 0)  # 回查原目录，防止更新掉到顶级
+        else:
+            real_cat = None  # 回查失败：不传该字段，让服务端保持原状
+        client.page_save(item_id, page_title, page_content, cat_id=real_cat, page_id=page_id)
         logger.info("updated page %s", page_id)
         return f"已更新页面「{old_title or page_title}」(page_id={page_id})"
     client.page_save(item_id, page_title, page_content, cat_id=cat_id, s_number=s_number or None)

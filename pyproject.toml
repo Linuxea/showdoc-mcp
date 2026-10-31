@@ -23,3 +23,8 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.1.1",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "live: 需要本地 Docker 起真实 ShowDoc 容器（无 Docker 自动 skip）",
+]
